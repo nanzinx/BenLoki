@@ -7,6 +7,7 @@ struct DashboardView: View {
     @State private var isAddingInstance = false
     @State private var isShowingSettings = false
     @State private var instancePendingRemoval: SessionInstance?
+    @State private var instanceBeingEdited: SessionInstance?
 
     var body: some View {
         NavigationStack {
@@ -43,6 +44,9 @@ struct DashboardView: View {
             .sheet(isPresented: $isShowingSettings) {
                 SettingsView()
             }
+            .sheet(item: $instanceBeingEdited) { instance in
+                EditInstanceView(instance: instance)
+            }
             .confirmationDialog(
                 "Remover conta?",
                 isPresented: isConfirmingRemoval,
@@ -72,6 +76,24 @@ struct DashboardView: View {
                     )
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    Button(role: .destructive) {
+                        instancePendingRemoval = instance
+                    } label: {
+                        Label("Remover", systemImage: "trash")
+                    }
+                    Button {
+                        instanceBeingEdited = instance
+                    } label: {
+                        Label("Editar", systemImage: "pencil")
+                    }
+                    .tint(.gray)
+                }
+                .contextMenu {
+                    Button {
+                        instanceBeingEdited = instance
+                    } label: {
+                        Label("Editar nome e ícone", systemImage: "pencil")
+                    }
                     Button(role: .destructive) {
                         instancePendingRemoval = instance
                     } label: {

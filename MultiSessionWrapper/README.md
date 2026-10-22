@@ -12,6 +12,7 @@ MultiSessionWrapper/
 ├── Models/
 │   ├── SessionInstance.swift            Modelo persistido + UserAgentMode
 │   ├── ServicePreset.swift              Serviços prontos (WhatsApp, Telegram)
+│   ├── AccountIcon.swift                Ícones disponíveis para as contas
 │   └── SiteMatcher.swift                Comparação de hosts (navegação e permissões)
 ├── Persistence/InstanceStore.swift      JSON versionado, gravação atômica
 ├── Isolation/DataStoreProvider.swift    Camada 1: WKWebsiteDataStore por instância
@@ -27,11 +28,14 @@ MultiSessionWrapper/
 │   ├── SessionDetailView.swift          Tela da instância + toolbar
 │   ├── SessionWebView.swift             UIViewRepresentable que hospeda o WebView
 │   ├── AddInstanceView.swift            Criação de conta
+│   ├── EditInstanceView.swift           Edição de nome e ícone
+│   ├── IconPicker.swift                 Grade de ícones (criação e edição)
 │   ├── SettingsView.swift               Ativar/desativar o bloqueio
 │   ├── LockView.swift                   Tela de bloqueio
 │   └── SessionStatus+UI.swift           Cor e texto de status
 └── Tests/
     ├── InstanceStoreTests.swift
+    ├── InstanceManagerTests.swift
     └── AppLockManagerTests.swift
 ```
 
@@ -39,9 +43,10 @@ MultiSessionWrapper/
 
 | Tela | Conteúdo |
 |---|---|
-| **Contas** (Dashboard) | Lista de contas com ícone, nome e status colorido (Ativa, Carregando, Inativa, Erro). Engrenagem à esquerda abre Ajustes; `+` à direita cria conta. Deslizar para a esquerda remove, com confirmação |
-| **Conta** | WebView da conta em tela cheia. Indicador de carregamento flutuante no topo. Barra com recarregar e menu de User-Agent (iPhone/Mac) |
-| **Nova conta** | Modelos prontos (WhatsApp, Telegram), nome, URL e User-Agent |
+| **Contas** (Dashboard) | Lista de contas com ícone, nome e status colorido (Ativa, Carregando, Inativa, Erro). Engrenagem à esquerda abre Ajustes; `+` à direita cria conta. Deslizar para a esquerda mostra Editar e Remover; tocar e segurar abre o mesmo menu |
+| **Conta** | WebView da conta em tela cheia. Indicador de carregamento flutuante no topo. Barra com recarregar e menu com "Editar nome e ícone" e User-Agent (iPhone/Mac) |
+| **Nova conta** | Modelos prontos (WhatsApp, Telegram), nome, URL, ícone e User-Agent |
+| **Editar conta** | Prévia ao vivo do ícone e do nome, campo de nome (até 40 caracteres), grade de 16 ícones. A URL aparece só para leitura: o login da conta pertence àquele site, e trocar a URL deixaria o data store órfão |
 | **Ajustes** | Interruptor "Exigir Face ID" |
 | **Bloqueio** | Ícone do Face ID, "Contas protegidas" e botão de desbloqueio |
 
@@ -129,6 +134,10 @@ Por que `unloadAll` por padrão: em background o iOS suspende o app em segundos,
 
 ## Configuração no Xcode
 
+**Caminho recomendado:** na raiz do repositório, rode `xcodegen`. O `project.yml` gera o projeto já com target de testes, iOS 17 e as chaves de `Info.plist` abaixo. Depois, só falta escolher o Team de assinatura e um Bundle Identifier único.
+
+**Manualmente:**
+
 1. Xcode 15+ → *New Project* → iOS → *App* (SwiftUI, Swift). Nome: `MultiSessionWrapper`.
 2. Substitua o `App` e o `ContentView` padrão. Adicione as pastas desta árvore ao target.
 3. Em **Deployment Info**, defina iOS 17.0 (recomendado; iOS 16 compila com o fallback).
@@ -146,12 +155,11 @@ Por que `unloadAll` por padrão: em background o iOS suspende o app em segundos,
    Sem `NSFaceIDUsageDescription`, o Face ID falha em tempo de execução.
 
 5. Não é necessária nenhuma capability especial.
-6. Rode os testes (`⌘U`) e confirme que os oito casos passam.
+6. Rode os testes (`⌘U`) e confirme que os onze casos passam.
 
 ## Próximos passos sugeridos
 
 - Tempo de tolerância para o bloqueio (ex.: só bloquear após 30 s em segundo plano).
-- Editor de nome e ícone da conta.
 - Limite de contas e verificação de capacidade de RAM por aparelho.
 - Atualizar `desktopSafariUserAgent` periodicamente ou torná-lo configurável remotamente.
 - Versão de schema em `FileInstanceStore` com migrações reais quando o modelo mudar.

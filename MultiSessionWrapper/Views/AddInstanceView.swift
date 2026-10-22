@@ -31,6 +31,10 @@ struct AddInstanceView: View {
                         .autocorrectionDisabled()
                 }
 
+                Section("Ícone") {
+                    IconPicker(selection: $iconSystemName)
+                }
+
                 Section {
                     Picker("User-Agent", selection: $userAgentMode) {
                         ForEach(UserAgentMode.allCases) { mode in

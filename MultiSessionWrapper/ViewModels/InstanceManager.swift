@@ -2,10 +2,12 @@ import Foundation
 
 enum InstanceError: LocalizedError {
     case invalidURL
+    case emptyName
 
     var errorDescription: String? {
         switch self {
         case .invalidURL: "Informe uma URL https:// válida."
+        case .emptyName: "Informe um nome para a conta."
         }
     }
 }
@@ -38,7 +40,7 @@ final class InstanceManager: ObservableObject {
         guard let url = Self.validatedURL(from: urlString) else {
             throw InstanceError.invalidURL
         }
-        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedName = Self.normalizedName(name)
         let instance = SessionInstance(
             name: trimmedName.isEmpty ? (url.host ?? "Conta") : trimmedName,
             iconSystemName: iconSystemName,
@@ -46,6 +48,15 @@ final class InstanceManager: ObservableObject {
             userAgentMode: userAgentMode
         )
         instances.append(instance)
+        persistOrReport()
+    }
+
+    func update(_ id: UUID, name: String, iconSystemName: String) throws {
+        let trimmedName = Self.normalizedName(name)
+        guard !trimmedName.isEmpty else { throw InstanceError.emptyName }
+        guard let index = instances.firstIndex(where: { $0.id == id }) else { return }
+        instances[index].name = trimmedName
+        instances[index].iconSystemName = iconSystemName
         persistOrReport()
     }
 
@@ -75,6 +86,13 @@ final class InstanceManager: ObservableObject {
         }
         return url
     }
+
+    /// Remove espaços nas pontas e limita o tamanho, para o nome caber na barra de navegação.
+    static func normalizedName(_ input: String) -> String {
+        String(input.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxNameLength))
+    }
+
+    static let maxNameLength = 40
 
     private func persistOrReport() {
         do {

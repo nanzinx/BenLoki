@@ -7,6 +7,8 @@ struct SessionDetailView: View {
     @EnvironmentObject private var runtime: SessionRuntime
     @Environment(\.scenePhase) private var scenePhase
 
+    @State private var isEditing = false
+
     var body: some View {
         Group {
             if let instance = currentInstance {
@@ -23,6 +25,9 @@ struct SessionDetailView: View {
                 .navigationTitle(instance.name)
                 .toolbar {
                     toolbarContent(for: instance)
+                }
+                .sheet(isPresented: $isEditing) {
+                    EditInstanceView(instance: instance)
                 }
             }
         }
@@ -49,6 +54,14 @@ struct SessionDetailView: View {
             }
 
             Menu {
+                Button {
+                    isEditing = true
+                } label: {
+                    Label("Editar nome e ícone", systemImage: "pencil")
+                }
+
+                Divider()
+
                 Picker("User-Agent", selection: userAgentBinding(for: instance)) {
                     ForEach(UserAgentMode.allCases) { mode in
                         Text(mode.title).tag(mode)

@@ -1,0 +1,9 @@
+# Gerados pelo XcodeGen a partir de project.yml
+*.xcodeproj
+MultiSessionWrapper/Info.plist
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcworkspace
+.DS_Store
