@@ -5,6 +5,7 @@ struct DashboardView: View {
     @EnvironmentObject private var runtime: SessionRuntime
 
     @State private var isAddingInstance = false
+    @State private var isShowingSettings = false
     @State private var instancePendingRemoval: SessionInstance?
 
     var body: some View {
@@ -18,6 +19,13 @@ struct DashboardView: View {
             }
             .navigationTitle("Contas")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        isShowingSettings = true
+                    } label: {
+                        Label("Ajustes", systemImage: "gearshape")
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         isAddingInstance = true
@@ -31,6 +39,9 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $isAddingInstance) {
                 AddInstanceView()
+            }
+            .sheet(isPresented: $isShowingSettings) {
+                SettingsView()
             }
             .confirmationDialog(
                 "Remover conta?",

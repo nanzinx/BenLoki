@@ -5,6 +5,8 @@ struct MultiSessionApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var runtime: SessionRuntime
     @StateObject private var manager: InstanceManager
+    @StateObject private var appLock = AppLockManager()
+    @StateObject private var lockPresenter = LockWindowPresenter()
 
     init() {
         let runtime = SessionRuntime()
@@ -27,7 +29,14 @@ struct MultiSessionApp: App {
             DashboardView()
                 .environmentObject(runtime)
                 .environmentObject(manager)
+                .environmentObject(appLock)
+                .onAppear {
+                    // A cena só existe depois do primeiro onAppear, não no init.
+                    lockPresenter.bind(to: appLock)
+                }
                 .onChange(of: scenePhase) { phase in
+                    // O bloqueio vem primeiro para cobrir a tela antes do snapshot.
+                    appLock.handleScenePhase(phase)
                     runtime.handleScenePhase(phase)
                 }
         }

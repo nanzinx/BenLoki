@@ -18,15 +18,34 @@ MultiSessionWrapper/
 ├── Runtime/
 │   ├── SessionController.swift          Dono de um WKWebView + delegates
 │   └── SessionRuntime.swift             Cache, LRU, ciclo de vida, memória
+├── Security/
+│   ├── AppLockManager.swift             Bloqueio por Face ID/Touch ID/código
+│   └── LockWindowPresenter.swift        UIWindow de bloqueio acima de tudo
 ├── ViewModels/InstanceManager.swift     ObservableObject com a lista de contas
 ├── Views/
 │   ├── DashboardView.swift              Lista com indicadores de status
 │   ├── SessionDetailView.swift          Tela da instância + toolbar
 │   ├── SessionWebView.swift             UIViewRepresentable que hospeda o WebView
 │   ├── AddInstanceView.swift            Criação de conta
+│   ├── SettingsView.swift               Ativar/desativar o bloqueio
+│   ├── LockView.swift                   Tela de bloqueio
 │   └── SessionStatus+UI.swift           Cor e texto de status
-└── Tests/InstanceStoreTests.swift
+└── Tests/
+    ├── InstanceStoreTests.swift
+    └── AppLockManagerTests.swift
 ```
+
+## Telas
+
+| Tela | Conteúdo |
+|---|---|
+| **Contas** (Dashboard) | Lista de contas com ícone, nome e status colorido (Ativa, Carregando, Inativa, Erro). Engrenagem à esquerda abre Ajustes; `+` à direita cria conta. Deslizar para a esquerda remove, com confirmação |
+| **Conta** | WebView da conta em tela cheia. Indicador de carregamento flutuante no topo. Barra com recarregar e menu de User-Agent (iPhone/Mac) |
+| **Nova conta** | Modelos prontos (WhatsApp, Telegram), nome, URL e User-Agent |
+| **Ajustes** | Interruptor "Exigir Face ID" |
+| **Bloqueio** | Ícone do Face ID, "Contas protegidas" e botão de desbloqueio |
+
+Visual: componentes nativos do SwiftUI (`List`, `Form`, `NavigationStack`), cor de destaque do sistema, suporte automático a modo escuro e Dynamic Type.
 
 Fluxo de dependências: `View → InstanceManager / SessionRuntime → SessionController → WKWebView`. As Views nunca criam WKWebView diretamente.
 
@@ -62,6 +81,19 @@ O WebKit gerencia os processos de renderização e **não** garante um processo 
 ### Camada 4 — Metadados em disco (`Persistence/InstanceStore.swift`)
 
 Só metadados (nome, URL, modo de User-Agent, IDs) vão para `instances.json` no Application Support, com proteção `completeFileProtectionUntilFirstUserAuthentication`. Credenciais e cookies **nunca** saem dos data stores do WebKit, e o app não copia cookies entre instâncias.
+
+### Camada 5 — Bloqueio do app (`Security/`)
+
+O app abre bloqueado e volta a bloquear sempre que vai para segundo plano.
+
+- **Autenticação:** usa `.deviceOwnerAuthentication`, ou seja, Face ID/Touch ID com fallback para o código do iPhone. Uma falha de biometria nunca tranca o usuário para fora.
+- **Janela própria:** a tela de bloqueio é uma `UIWindow` acima do nível de alertas. Um overlay comum no SwiftUI não cobriria sheets, alerts e diálogos que estivessem abertos. O VoiceOver também não lê o conteúdo por baixo (`accessibilityViewIsModal`).
+- **App switcher:** ao ficar inativo, o conteúdo é coberto de forma síncrona, antes do snapshot que o iOS tira. Assim as conversas não aparecem na miniatura do alternador.
+- **Sem loop de prompts:** o prompt abre sozinho uma vez por bloqueio. Como o próprio prompt deixa o app inativo e ativo de novo, repeti-lo após um cancelamento criaria um loop. Depois disso, o usuário usa o botão "Desbloquear".
+- **Ativar/desativar** em Ajustes exige autenticação nos dois sentidos. O padrão é ativado.
+- **Sem código no aparelho:** não há como autenticar, então o app não bloqueia e o interruptor fica desabilitado com uma explicação.
+
+Limite: é uma barreira de interface contra quem pega o aparelho já desbloqueado. Em disco, a proteção dos dados continua sendo o Data Protection do iOS.
 
 ## Ciclo de vida, memória e bateria
 
@@ -107,14 +139,18 @@ Por que `unloadAll` por padrão: em background o iOS suspende o app em segundos,
 <string>Usada pelos serviços de chamada de vídeo nas suas contas.</string>
 <key>NSMicrophoneUsageDescription</key>
 <string>Usada para mensagens de voz e chamadas nas suas contas.</string>
+<key>NSFaceIDUsageDescription</key>
+<string>Protege suas contas contra acesso de outras pessoas.</string>
 ```
 
+   Sem `NSFaceIDUsageDescription`, o Face ID falha em tempo de execução.
+
 5. Não é necessária nenhuma capability especial.
-6. Rode os testes (`⌘U`) e confirme que os cinco casos passam.
+6. Rode os testes (`⌘U`) e confirme que os oito casos passam.
 
 ## Próximos passos sugeridos
 
-- Bloqueio por Face ID (`LocalAuthentication`) ao abrir o app e tela de privacidade no app switcher (overlay em `.inactive`).
+- Tempo de tolerância para o bloqueio (ex.: só bloquear após 30 s em segundo plano).
 - Editor de nome e ícone da conta.
 - Limite de contas e verificação de capacidade de RAM por aparelho.
 - Atualizar `desktopSafariUserAgent` periodicamente ou torná-lo configurável remotamente.
